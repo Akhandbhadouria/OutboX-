@@ -12,7 +12,6 @@ import type { SlackStatusDto } from '@reachinbox/shared';
 export const slackRouter = Router();
 slackRouter.use(requireAuth);
 
-// ─── GET /api/slack/connect ────────────────────────────────────────────────────
 slackRouter.get('/connect', (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!config.SLACK_CLIENT_ID || !config.SLACK_CALLBACK_URL) {
@@ -35,7 +34,6 @@ slackRouter.get('/connect', (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
-// ─── GET /api/slack/callback ───────────────────────────────────────────────────
 slackRouter.get('/callback', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { code, state, error } = req.query as Record<string, string>;
@@ -55,7 +53,6 @@ slackRouter.get('/callback', async (req: Request, res: Response, next: NextFunct
       throw createError('Slack OAuth not configured', 501);
     }
 
-    // Exchange code for token
     const client = new WebClient();
     const oauthResult = await client.oauth.v2.access({
       client_id: config.SLACK_CLIENT_ID,
@@ -109,7 +106,6 @@ slackRouter.get('/callback', async (req: Request, res: Response, next: NextFunct
   }
 });
 
-// ─── GET /api/slack/status ─────────────────────────────────────────────────────
 slackRouter.get('/status', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const connection = await prisma.slackConnection.findUnique({
@@ -135,7 +131,6 @@ slackRouter.get('/status', async (req: Request, res: Response, next: NextFunctio
   }
 });
 
-// ─── POST /api/slack/disconnect ────────────────────────────────────────────────
 slackRouter.post('/disconnect', async (req: Request, res: Response, next: NextFunction) => {
   try {
     await prisma.slackConnection.updateMany({
@@ -150,11 +145,6 @@ slackRouter.post('/disconnect', async (req: Request, res: Response, next: NextFu
   }
 });
 
-// ─── Slack notification helper ─────────────────────────────────────────────────
-/**
- * Send a Slack message for the authenticated user's connected workspace.
- * Decrypts the token at call time — never logged or stored decrypted.
- */
 export async function sendSlackNotification(
   userId: string,
   message: string
@@ -178,14 +168,12 @@ export async function sendSlackNotification(
   try {
     const token = decrypt(connection.tokenEnc, encKey);
     const client = new WebClient(token);
-    // Post to the general channel or the first available channel
     await client.chat.postMessage({
       channel: '#general',
       text: message,
     });
     logger.info('Slack notification sent', { userId });
   } catch (err) {
-    // Must not crash email scheduling
     logger.error('Slack notification failed', {
       userId,
       error: (err as Error).message,

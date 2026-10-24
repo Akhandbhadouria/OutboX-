@@ -5,9 +5,6 @@ import { encrypt, decrypt } from '../../utils/crypto';
 import { createError } from '../../middleware/errorHandler';
 import nodemailer from 'nodemailer';
 
-/**
- * List a user's active senders — never returns SMTP credentials.
- */
 export async function getSenders(userId: string): Promise<SenderDto[]> {
   const senders = await prisma.sender.findMany({
     where: { userId, isActive: true },
@@ -31,9 +28,6 @@ export async function getSenders(userId: string): Promise<SenderDto[]> {
   }));
 }
 
-/**
- * Create a sender with encrypted SMTP password.
- */
 export async function createSender(
   userId: string,
   data: {
@@ -73,9 +67,6 @@ export async function createSender(
   };
 }
 
-/**
- * Create a Nodemailer transport from a sender's (decrypted) SMTP credentials.
- */
 export async function createTransportForSender(senderId: string, userId: string) {
   const sender = await prisma.sender.findFirst({
     where: { id: senderId, userId, isActive: true },
@@ -98,10 +89,6 @@ export async function createTransportForSender(senderId: string, userId: string)
   };
 }
 
-/**
- * Create an Ethereal test sender for demonstration.
- * Returns the sender record ID so it can be used immediately.
- */
 export async function createEtherealSender(userId: string): Promise<SenderDto> {
   const testAccount = await nodemailer.createTestAccount();
 

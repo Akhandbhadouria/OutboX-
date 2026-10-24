@@ -1,7 +1,3 @@
-/**
- * Unit tests for request validation logic.
- * Tests the Zod schemas and CSV parsing logic.
- */
 
 import { ScheduleEmailSchema, CreateCampaignSchema } from '@reachinbox/shared';
 
@@ -26,14 +22,12 @@ describe('ScheduleEmailSchema validation', () => {
       ...validPayload,
       recipients: ['not-an-email', 'also@invalid'],
     });
-    // 'not-an-email' should fail, 'also@invalid' might pass depending on strictness
     const hasError = result.success === false;
     expect(hasError).toBe(true);
   });
 
   it('rejects missing senderId', () => {
     const result = ScheduleEmailSchema.safeParse({ ...validPayload, senderId: '' });
-    // uuid validation requires valid uuid
     expect(result.success).toBe(false);
   });
 
@@ -101,7 +95,6 @@ describe('CreateCampaignSchema validation', () => {
 });
 
 describe('CSV/email parsing logic', () => {
-  // Test the parsing logic used in the email router
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   function parseEmailsFromText(content: string): { valid: string[]; invalid: string[] } {

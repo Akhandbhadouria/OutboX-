@@ -22,7 +22,6 @@ import { logger } from '../../utils/logger';
 export const emailRouter = Router();
 emailRouter.use(requireAuth);
 
-// ─── Multer setup ─────────────────────────────────────────────────────────────
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: config.MAX_UPLOAD_SIZE_MB * 1024 * 1024 },
@@ -36,13 +35,11 @@ const upload = multer({
   },
 });
 
-// ─── Pagination schema ────────────────────────────────────────────────────────
 const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-// ─── POST /api/campaigns ─────────────────────────────────────────────────────
 emailRouter.post(
   '/campaigns',
   upload.single('recipientFile'),
@@ -50,7 +47,6 @@ emailRouter.post(
     try {
       let recipients: string[] = [];
 
-      // Parse recipients from file if provided
       if (req.file) {
         const fileContent = req.file.buffer.toString('utf-8');
         recipients = parseRecipientsFromContent(fileContent);
@@ -80,7 +76,6 @@ emailRouter.post(
   }
 );
 
-// ─── POST /api/emails/schedule ────────────────────────────────────────────────
 emailRouter.post(
   '/schedule',
   validate(ScheduleEmailSchema),
@@ -94,7 +89,6 @@ emailRouter.post(
   }
 );
 
-// ─── GET /api/emails/search ────────────────────────────────────────────────────
 emailRouter.get(
   '/search',
   async (req: Request, res: Response, next: NextFunction) => {
@@ -111,7 +105,6 @@ emailRouter.get(
   }
 );
 
-// ─── GET /api/emails/scheduled ─────────────────────────────────────────────────
 emailRouter.get(
   '/scheduled',
   async (req: Request, res: Response, next: NextFunction) => {
@@ -125,7 +118,6 @@ emailRouter.get(
   }
 );
 
-// ─── GET /api/emails/sent ──────────────────────────────────────────────────────
 emailRouter.get(
   '/sent',
   async (req: Request, res: Response, next: NextFunction) => {
@@ -139,7 +131,6 @@ emailRouter.get(
   }
 );
 
-// ─── GET /api/emails/:id ───────────────────────────────────────────────────────
 emailRouter.get(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
@@ -152,7 +143,6 @@ emailRouter.get(
   }
 );
 
-// ─── GET /api/senders ─────────────────────────────────────────────────────────
 emailRouter.get('/senders', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const senders = await getSenders(req.session.userId!);
@@ -162,7 +152,6 @@ emailRouter.get('/senders', async (req: Request, res: Response, next: NextFuncti
   }
 });
 
-// ─── GET /api/dashboard/stats ─────────────────────────────────────────────────
 emailRouter.get('/dashboard/stats', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const stats = await getDashboardStats(req.session.userId!);
@@ -172,12 +161,10 @@ emailRouter.get('/dashboard/stats', async (req: Request, res: Response, next: Ne
   }
 });
 
-// ─── CSV parsing helper ────────────────────────────────────────────────────────
 function parseRecipientsFromContent(content: string): string[] {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const emails = new Set<string>();
 
-  // Try CSV parse first
   try {
     const records = parseCsv(content, { skip_empty_lines: true, trim: true });
     for (const row of records as string[][]) {
@@ -189,7 +176,6 @@ function parseRecipientsFromContent(content: string): string[] {
       }
     }
   } catch {
-    // Fall back to line-by-line parsing
     for (const line of content.split(/\r?\n/)) {
       const normalized = line.trim().toLowerCase();
       if (emailRegex.test(normalized)) {

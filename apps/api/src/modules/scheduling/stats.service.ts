@@ -20,7 +20,6 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
       }),
     ]);
 
-  // Queue counts (not user-filtered, but useful for admins)
   let pendingJobs = 0;
   let activeJobs = 0;
   try {

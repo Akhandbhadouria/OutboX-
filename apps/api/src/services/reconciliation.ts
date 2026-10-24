@@ -4,23 +4,9 @@ import { logger } from '../utils/logger';
 import { differenceInMilliseconds } from 'date-fns';
 import type { EmailJobData } from '@reachinbox/shared';
 
-/**
- * Transactional outbox reconciliation.
- *
- * On startup, find all emails with status='scheduled' that either:
- *   1. Have no bullJobId (never successfully enqueued), OR
- *   2. Were left in 'processing' state (worker crashed mid-flight)
- *
- * For case 1: re-enqueue with the deterministic job ID.
- * For case 2: reset to 'scheduled' so the worker can pick them up.
- *
- * BullMQ's deterministic job ID prevents duplicates — if the job already
- * exists in the queue, the enqueue call is a no-op.
- */
 export async function reconcileUnqueuedEmails(): Promise<void> {
   logger.info('Running startup email reconciliation...');
 
-  // Reset stuck 'processing' emails
   const stuckCount = await prisma.scheduledEmail.updateMany({
     where: { status: 'processing' },
     data: { status: 'scheduled', lastError: 'Reset after restart' },
@@ -30,7 +16,6 @@ export async function reconcileUnqueuedEmails(): Promise<void> {
     logger.warn(`Reset ${stuckCount.count} stuck 'processing' emails to 'scheduled'`);
   }
 
-  // Find emails not yet enqueued
   const unqueuedEmails = await prisma.scheduledEmail.findMany({
     where: {
       status: 'scheduled',

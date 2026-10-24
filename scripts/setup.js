@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-/**
- * Developer setup helper script for ReachInbox Email Scheduler.
- * Checks prerequisites, copies .env, generates Prisma client, and prints onboarding guide.
- */
 
 const fs = require('fs');
 const path = require('path');
@@ -12,7 +8,6 @@ const rootDir = path.resolve(__dirname, '..');
 
 console.log('\n🚀 Starting ReachInbox Scheduler setup...\n');
 
-// 1. Copy .env.example to .env if not exists
 const envPath = path.join(rootDir, '.env');
 const envExamplePath = path.join(rootDir, '.env.example');
 
@@ -23,7 +18,6 @@ if (!fs.existsSync(envPath) && fs.existsSync(envExamplePath)) {
   console.log('ℹ️  .env already exists, keeping current configuration');
 }
 
-// 2. Generate Prisma Client
 console.log('📦 Generating Prisma client...');
 try {
   execSync('npm run db:generate --workspace=apps/api', { cwd: rootDir, stdio: 'inherit' });

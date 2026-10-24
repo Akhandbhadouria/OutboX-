@@ -36,11 +36,9 @@ export default function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-surface-950 flex flex-col">
-      {/* ─── Header ─────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 bg-surface-900/80 backdrop-blur-md border-b border-surface-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
             <Link to="/dashboard" className="flex items-center gap-2.5">
               <div className="p-1.5 bg-primary-600 rounded-lg">
                 <Mail className="w-4 h-4 text-white" />
@@ -48,7 +46,6 @@ export default function DashboardLayout() {
               <span className="font-bold text-white">ReachInbox</span>
             </Link>
 
-            {/* Nav */}
             <nav className="hidden md:flex items-center gap-1">
               <Link
                 to="/dashboard"
@@ -68,9 +65,7 @@ export default function DashboardLayout() {
               </a>
             </nav>
 
-            {/* Right side */}
             <div className="flex items-center gap-3">
-              {/* Slack status */}
               {slackStatus?.connected ? (
                 <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-xs text-emerald-400">
                   <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse-slow" />
@@ -86,7 +81,6 @@ export default function DashboardLayout() {
                 </a>
               )}
 
-              {/* User menu */}
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -152,7 +146,6 @@ export default function DashboardLayout() {
         </div>
       </header>
 
-      {/* ─── Main content ─────────────────────────────────────────────────── */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Routes>
           <Route index element={<DashboardPage />} />

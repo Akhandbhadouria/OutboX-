@@ -1,15 +1,3 @@
-/**
- * Load test: Schedule 1,000 email jobs and verify:
- * - All jobs are persisted in BullMQ
- * - Concurrency bounds are respected
- * - Rate limiting is enforced
- * - Jobs survive a simulated restart (deterministic IDs are idempotent)
- *
- * This test does NOT send 1,000 real SMTP messages.
- * It uses mocked Nodemailer transports.
- *
- * Run with: REDIS_URL=redis://localhost:6379 npx ts-node tests/load/load-test.ts
- */
 
 import { Queue, Worker, QueueEvents } from 'bullmq';
 import IORedis from 'ioredis';
@@ -36,10 +24,8 @@ async function runLoadTest() {
 
   const queue = new Queue<TestJobData>(TEST_QUEUE, { connection });
 
-  // Clean up any previous test runs
   await queue.drain();
 
-  // ─── Phase 1: Enqueue 1,000 jobs ────────────────────────────────────────────
   console.log(`\n[1/4] Enqueueing ${NUM_JOBS} jobs...`);
   const startEnqueue = Date.now();
 
@@ -61,7 +47,6 @@ async function runLoadTest() {
   const enqueueTime = Date.now() - startEnqueue;
   console.log(`✅ Enqueued ${NUM_JOBS} jobs in ${enqueueTime}ms`);
 
-  // ─── Phase 2: Verify queue counts ────────────────────────────────────────────
   console.log('\n[2/4] Verifying queue counts...');
   const counts = await queue.getJobCounts('waiting', 'delayed', 'active', 'completed', 'failed');
   console.log('Queue counts:', counts);
@@ -69,7 +54,6 @@ async function runLoadTest() {
   const totalQueued = (counts.waiting ?? 0) + (counts.delayed ?? 0) + (counts.active ?? 0);
   console.log(`Total in queue: ${totalQueued}`);
 
-  // ─── Phase 3: Simulate restart (re-enqueue with same IDs) ────────────────────
   console.log('\n[3/4] Simulating restart: re-enqueuing with same deterministic IDs...');
   let duplicatesBlocked = 0;
 
@@ -85,7 +69,6 @@ async function runLoadTest() {
 
   console.log(`✅ Re-enqueue test: ${duplicatesBlocked} duplicates blocked by BullMQ`);
 
-  // ─── Phase 4: Process with concurrency ───────────────────────────────────────
   console.log(`\n[4/4] Processing ${Math.min(200, NUM_JOBS)} jobs with concurrency=${CONCURRENCY}...`);
 
   let processed = 0;
@@ -98,7 +81,6 @@ async function runLoadTest() {
     async (job) => {
       currentConcurrent++;
       maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
-      // Simulate some processing time
       await new Promise((r) => setTimeout(r, 5));
       processed++;
       currentConcurrent--;
@@ -109,7 +91,6 @@ async function runLoadTest() {
     }
   );
 
-  // Wait for 200 jobs or 10 seconds
   await new Promise<void>((resolve) => {
     const interval = setInterval(async () => {
       if (processed >= Math.min(200, NUM_JOBS) || Date.now() - startProcess > 10_000) {
@@ -129,11 +110,9 @@ async function runLoadTest() {
   console.log(`  Max concurrent: ${maxConcurrent} (limit: ${CONCURRENCY})`);
   console.log(`  Remaining: ${(remaining.waiting ?? 0) + (remaining.delayed ?? 0)} waiting`);
 
-  // Assertions
   const passed = maxConcurrent <= CONCURRENCY;
   console.log(`\n${passed ? '✅' : '❌'} Concurrency bound (${maxConcurrent} <= ${CONCURRENCY}): ${passed ? 'PASSED' : 'FAILED'}`);
 
-  // Clean up
   await queue.drain();
   await queue.close();
   await connection.quit();

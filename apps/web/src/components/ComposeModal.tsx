@@ -73,7 +73,6 @@ export default function ComposeModal({ onClose }: { onClose: () => void }) {
     const invalid: string[] = [];
     let duplicates = 0;
 
-    // Try CSV parse first
     const result = Papa.parse<string[]>(content, { skipEmptyLines: true });
 
     for (const row of result.data) {
@@ -120,7 +119,6 @@ export default function ComposeModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-800">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-primary-600/20 rounded-lg">
@@ -134,14 +132,12 @@ export default function ComposeModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
-          {/* Campaign name */}
           <div>
             <label className="label">Campaign Name</label>
             <input {...register('name')} className={`input ${errors.name ? 'input-error' : ''}`} placeholder="e.g., November Outreach" />
             {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name.message}</p>}
           </div>
 
-          {/* Sender */}
           <div>
             <label className="label">Sender</label>
             {!senders?.length ? (
@@ -162,14 +158,12 @@ export default function ComposeModal({ onClose }: { onClose: () => void }) {
             {errors.senderId && <p className="text-xs text-red-400 mt-1">{errors.senderId.message}</p>}
           </div>
 
-          {/* Subject */}
           <div>
             <label className="label">Subject</label>
             <input {...register('subject')} className={`input ${errors.subject ? 'input-error' : ''}`} placeholder="Product demonstration" />
             {errors.subject && <p className="text-xs text-red-400 mt-1">{errors.subject.message}</p>}
           </div>
 
-          {/* Body */}
           <div>
             <label className="label">Message Body</label>
             <textarea
@@ -181,11 +175,9 @@ export default function ComposeModal({ onClose }: { onClose: () => void }) {
             {errors.body && <p className="text-xs text-red-400 mt-1">{errors.body.message}</p>}
           </div>
 
-          {/* Recipients */}
           <div>
             <label className="label">Recipients</label>
 
-            {/* Upload zone */}
             <div
               className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer ${
                 dragOver ? 'border-primary-500 bg-primary-500/5' : 'border-surface-700 hover:border-surface-600'
@@ -215,7 +207,6 @@ export default function ComposeModal({ onClose }: { onClose: () => void }) {
               <p className="text-xs text-slate-600 mt-1">One email per line or comma-separated</p>
             </div>
 
-            {/* Manual entry */}
             <div className="mt-3">
               <label className="label text-xs text-slate-500">Or paste addresses manually</label>
               <textarea
@@ -230,7 +221,6 @@ export default function ComposeModal({ onClose }: { onClose: () => void }) {
               />
             </div>
 
-            {/* Parse results */}
             {parseResult && (
               <div className="mt-3 space-y-2">
                 <div className="flex items-center gap-2 text-xs text-emerald-400">
@@ -250,7 +240,6 @@ export default function ComposeModal({ onClose }: { onClose: () => void }) {
             )}
           </div>
 
-          {/* Scheduling config */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="label">
@@ -296,7 +285,6 @@ export default function ComposeModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {/* Info banner */}
           <div className="flex items-start gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
             <Info className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
             <p className="text-xs text-blue-300">
@@ -305,7 +293,6 @@ export default function ComposeModal({ onClose }: { onClose: () => void }) {
             </p>
           </div>
 
-          {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
             <button

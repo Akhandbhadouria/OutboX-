@@ -46,7 +46,6 @@ async function startWorker(): Promise<void> {
     minSendIntervalMs: config.minSendIntervalMs,
   });
 
-  // ─── Dependencies ──────────────────────────────────────────────────────────
   const prisma = new PrismaClient();
   await prisma.$connect();
   logger.info('Worker database connected');
@@ -60,7 +59,6 @@ async function startWorker(): Promise<void> {
 
   const es = new ElasticsearchClient({ node: config.esUrl });
 
-  // ─── BullMQ Worker ────────────────────────────────────────────────────────
   const worker = new Worker<EmailJobData>(
     EMAIL_QUEUE_NAME,
     async (job) => {
@@ -78,10 +76,8 @@ async function startWorker(): Promise<void> {
         enableReadyCheck: false,
       }),
       concurrency: config.concurrency,
-      // Lock renewal: renew the lock every 15s when processing long jobs
       lockDuration: 30_000,
       lockRenewTime: 15_000,
-      // Stalled job detection: reclaim jobs where the worker died mid-flight
       stalledInterval: 30_000,
       maxStalledCount: 2,
     }
@@ -110,7 +106,6 @@ async function startWorker(): Promise<void> {
 
   logger.info('Email worker started and listening for jobs');
 
-  // ─── Graceful shutdown ─────────────────────────────────────────────────────
   const shutdown = async (signal: string) => {
     logger.info(`${signal} received — draining worker`);
     await worker.close();

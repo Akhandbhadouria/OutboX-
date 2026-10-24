@@ -1,22 +1,16 @@
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto';
 
-/**
- * AES-256-GCM encryption for sensitive tokens stored in the database.
- * The key is derived from an environment variable using scrypt.
- */
 function deriveKey(rawKey: string): Buffer {
-  // Use a fixed salt for deterministic key derivation (the raw key provides entropy)
   const salt = Buffer.from('reachinbox-aes-salt-v1', 'utf8');
   return scryptSync(rawKey, salt, 32);
 }
 
 export function encrypt(plaintext: string, rawKey: string): string {
   const key = deriveKey(rawKey);
-  const iv = randomBytes(12); // 96-bit IV for GCM
+  const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag(); // 128-bit authentication tag
-  // Format: iv:tag:ciphertext (all hex)
+  const tag = cipher.getAuthTag();
   return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted.toString('hex')}`;
 }
 

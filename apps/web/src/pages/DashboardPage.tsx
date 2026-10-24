@@ -57,7 +57,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* ─── Stats row ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Clock}
@@ -94,7 +93,6 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* ─── Main table card ──────────────────────────────────────────────── */}
       <div className="card">
         <div className="card-header flex-col sm:flex-row gap-3">
           <div className="flex items-center gap-1">
@@ -115,7 +113,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
               <input
@@ -139,7 +136,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="table-wrapper rounded-none border-0">
           <table className="table">
             <thead>
@@ -193,7 +189,6 @@ export default function DashboardPage() {
           </table>
         </div>
 
-        {/* Pagination */}
         {displayData && displayData.totalPages > 1 && (
           <div className="px-6 py-4 border-t border-surface-800 flex items-center justify-between text-xs text-slate-400">
             <span>
@@ -222,13 +217,11 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Compose modal */}
       {composeOpen && <ComposeModal onClose={() => setComposeOpen(false)} />}
     </div>
   );
 }
 
-// ─── Sub-components ────────────────────────────────────────────────────────────
 function StatCard({
   icon: Icon,
   iconColor,

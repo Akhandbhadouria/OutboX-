@@ -7,7 +7,6 @@ import { requireAuth } from '../../middleware/auth';
 import { logger } from '../../utils/logger';
 import type { UserDto } from '@reachinbox/shared';
 
-// ─── Passport Strategy Setup ───────────────────────────────────────────────────
 export function configurePassport(): void {
   passport.use(
     new GoogleStrategy(
@@ -51,7 +50,6 @@ export function configurePassport(): void {
     )
   );
 
-  // We use session-based auth with express-session, not passport serialize/deserialize
   passport.serializeUser((user: Express.User, done) => {
     done(null, (user as { id: string }).id);
   });
@@ -66,10 +64,8 @@ export function configurePassport(): void {
   });
 }
 
-// ─── Auth Router ───────────────────────────────────────────────────────────────
 export const authRouter = Router();
 
-// Initiate Google OAuth flow
 authRouter.get('/google', (req: Request, res: Response, next: NextFunction) => {
   passport.authenticate('google', {
     scope: ['profile', 'email'],
@@ -77,7 +73,6 @@ authRouter.get('/google', (req: Request, res: Response, next: NextFunction) => {
   })(req, res, next);
 });
 
-// Google OAuth callback
 authRouter.get(
   '/google/callback',
   passport.authenticate('google', {
@@ -90,7 +85,6 @@ authRouter.get(
       res.redirect(`${config.WEB_ORIGIN}/login?error=no_user`);
       return;
     }
-    // Store user ID in session (session-based auth)
     req.session.userId = user.id;
     req.session.save((err) => {
       if (err) {
@@ -103,7 +97,6 @@ authRouter.get(
   }
 );
 
-// Get current user
 authRouter.get('/me', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = await prisma.user.findUnique({
@@ -131,7 +124,6 @@ authRouter.get('/me', requireAuth, async (req: Request, res: Response, next: Nex
   }
 });
 
-// Logout
 authRouter.post('/logout', requireAuth, (req: Request, res: Response, next: NextFunction) => {
   const userId = req.session.userId;
   req.session.destroy((err) => {

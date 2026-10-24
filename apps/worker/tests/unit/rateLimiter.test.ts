@@ -1,7 +1,3 @@
-/**
- * Tests for distributed rate limiting logic.
- * These are unit tests that mock Redis operations.
- */
 
 import { getHourKey, getNextHourMs } from '../../src/queue/rateLimiter';
 
@@ -35,7 +31,6 @@ describe('Email job determinism', () => {
     const emailId = 'test-email-123';
     const jobId = `email-${emailId}`;
     expect(jobId).toBe('email-test-email-123');
-    // Same ID every time — idempotent
     expect(`email-${emailId}`).toBe(jobId);
   });
 
@@ -49,7 +44,7 @@ describe('Email job determinism', () => {
 describe('Min delay enforcement logic', () => {
   it('calculates correct delay from scheduled time', () => {
     const now = Date.now();
-    const futureMs = now + 60_000; // 1 minute from now
+    const futureMs = now + 60_000;
     const delayMs = Math.max(0, futureMs - now);
     expect(delayMs).toBeGreaterThan(0);
     expect(delayMs).toBeLessThanOrEqual(60_000);

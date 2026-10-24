@@ -24,7 +24,6 @@ async function request<T>(
   });
 
   if (res.status === 401) {
-    // Redirect to login
     window.location.href = '/login';
     throw new ApiError(401, 'Unauthorized');
   }
@@ -38,14 +37,12 @@ async function request<T>(
   return json.data as T;
 }
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
 export const authApi = {
   me: () => request<UserDto>('/auth/me'),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   googleLoginUrl: `${API_BASE}/auth/google`,
 };
 
-// ─── Emails ───────────────────────────────────────────────────────────────────
 export const emailApi = {
   scheduled: (page = 1, pageSize = 20) =>
     request<PaginatedResponse<ScheduledEmailDto>>(`/emails/scheduled?page=${page}&pageSize=${pageSize}`),
@@ -65,7 +62,6 @@ export const emailApi = {
     }),
 };
 
-// ─── Campaigns ────────────────────────────────────────────────────────────────
 export const campaignApi = {
   create: (formData: FormData) =>
     fetch(`${API_BASE}/campaigns`, {
@@ -79,17 +75,14 @@ export const campaignApi = {
     }),
 };
 
-// ─── Senders ─────────────────────────────────────────────────────────────────
 export const senderApi = {
   list: () => request<SenderDto[]>('/senders'),
 };
 
-// ─── Dashboard ────────────────────────────────────────────────────────────────
 export const dashboardApi = {
   stats: () => request<DashboardStats>('/dashboard/stats'),
 };
 
-// ─── Slack ───────────────────────────────────────────────────────────────────
 export const slackApi = {
   status: () => request<SlackStatusDto>('/slack/status'),
   connectUrl: `${API_BASE}/slack/connect`,

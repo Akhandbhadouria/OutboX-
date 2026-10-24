@@ -16,24 +16,15 @@ import type {
 import { v4 as uuidv4 } from 'uuid';
 import { parseISO, differenceInMilliseconds, addSeconds, isFuture } from 'date-fns';
 
-/**
- * Create a campaign and schedule all its recipient emails.
- * Uses a database transaction — BullMQ enqueue happens AFTER commit.
- * Implements a transactional outbox pattern: emails are created in DB first,
- * then enqueued; if the process crashes between commit and enqueue,
- * a reconciliation process re-enqueues on startup.
- */
 export async function createCampaign(
   userId: string,
   input: CreateCampaignInput
 ): Promise<CampaignDto> {
-  // Validate sender ownership
   const sender = await prisma.sender.findFirst({
     where: { id: input.senderId, userId, isActive: true },
   });
   if (!sender) throw createError('Sender not found or inactive', 404);
 
-  // Enforce system hourly limit
   const effectiveMaxPerHour = Math.min(
     input.maxEmailsPerHour,
     config.MAX_EMAILS_PER_HOUR_PER_SENDER
@@ -42,7 +33,6 @@ export async function createCampaign(
   const startAt = parseISO(input.startAt);
   const delayMs = input.delaySeconds * 1000;
 
-  // Deduplicate recipients
   const uniqueRecipients = [...new Set(input.recipients)];
   if (uniqueRecipients.length > config.MAX_RECIPIENTS_PER_CAMPAIGN) {
     throw createError(
@@ -51,7 +41,6 @@ export async function createCampaign(
     );
   }
 
-  // ─── Database transaction ────────────────────────────────────────────────────
   const campaign = await prisma.$transaction(async (tx) => {
     const newCampaign = await tx.emailCampaign.create({
       data: {
@@ -67,10 +56,7 @@ export async function createCampaign(
       },
     });
 
-    // Calculate scheduled times respecting delay between sends
     const emailRecords = uniqueRecipients.map((recipient, index) => {
-      // Spread emails over time: each email is delayed by index * delaySeconds
-      // Rate-limiting will further throttle if hourly limit is hit
       const emailScheduledAt = addSeconds(startAt, index * input.delaySeconds);
 
       return {
@@ -87,7 +73,6 @@ export async function createCampaign(
       };
     });
 
-    // Batch create email records
     await tx.scheduledEmail.createMany({
       data: emailRecords,
       skipDuplicates: true, // idempotent on idempotencyKey
@@ -96,14 +81,11 @@ export async function createCampaign(
     return newCampaign;
   });
 
-  // ─── Post-transaction: enqueue BullMQ jobs ────────────────────────────────
-  // Fetch the created email records to get their database IDs
   const emailRecords = await prisma.scheduledEmail.findMany({
     where: { campaignId: campaign.id, status: 'scheduled' },
     orderBy: { scheduledAt: 'asc' },
   });
 
-  // Enqueue jobs asynchronously — a failed enqueue is recovered by reconciliation
   const enqueuePromises = emailRecords.map(async (email) => {
     const delayFromNow = Math.max(
       0,
@@ -127,7 +109,6 @@ export async function createCampaign(
 
     try {
       const jobId = await enqueueEmailJob(email.id, jobData, delayFromNow);
-      // Update with BullMQ job ID
       await prisma.scheduledEmail.update({
         where: { id: email.id },
         data: { bullJobId: jobId },
@@ -143,7 +124,6 @@ export async function createCampaign(
 
   await Promise.all(enqueuePromises);
 
-  // Index in Elasticsearch (non-blocking)
   indexCampaignEmails(emailRecords, campaign.id, campaign.name, sender).catch((err) => {
     logger.error('ES indexing failed for campaign', {
       campaignId: campaign.id,
@@ -170,9 +150,6 @@ export async function createCampaign(
   };
 }
 
-/**
- * Schedule individual emails (not part of a campaign).
- */
 export async function scheduleEmails(
   userId: string,
   input: ScheduleEmailInput
@@ -241,7 +218,7 @@ export async function scheduleEmails(
     } catch (err) {
       const errMsg = (err as Error).message ?? '';
       if (errMsg.includes('Unique constraint')) {
-        skipped++; // Already scheduled
+        skipped++;
       } else {
         throw err;
       }
@@ -251,9 +228,6 @@ export async function scheduleEmails(
   return { scheduled, skipped };
 }
 
-/**
- * List scheduled emails for a user (paginated).
- */
 export async function getScheduledEmails(
   userId: string,
   page: number,
@@ -279,9 +253,6 @@ export async function getScheduledEmails(
   };
 }
 
-/**
- * List sent/failed emails for a user (paginated).
- */
 export async function getSentEmails(
   userId: string,
   page: number,
@@ -309,9 +280,6 @@ export async function getSentEmails(
   };
 }
 
-/**
- * Get a single email by ID, enforcing user ownership.
- */
 export async function getEmailById(
   userId: string,
   emailId: string
@@ -324,9 +292,6 @@ export async function getEmailById(
   return toDto(email);
 }
 
-/**
- * Search emails via Elasticsearch.
- */
 export async function searchEmails(
   userId: string,
   query: string,
@@ -373,7 +338,6 @@ export async function searchEmails(
   };
 }
 
-// ─── Private helpers ───────────────────────────────────────────────────────────
 type EmailWithSender = Awaited<
   ReturnType<typeof prisma.scheduledEmail.findFirst>
 > & { sender: Awaited<ReturnType<typeof prisma.sender.findFirst>> };

@@ -11,7 +11,6 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000,
       retry: (failureCount, error) => {
-        // Don't retry 401/403 errors
         if ((error as { status?: number })?.status === 401) return false;
         if ((error as { status?: number })?.status === 403) return false;
         return failureCount < 2;

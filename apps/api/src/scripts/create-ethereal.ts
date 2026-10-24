@@ -3,15 +3,6 @@ import nodemailer from 'nodemailer';
 import { PrismaClient } from '@prisma/client';
 import { encrypt } from '../utils/crypto';
 
-/**
- * Creates an Ethereal test account and a sender record in the database.
- *
- * Usage: npm run create-ethereal --workspace=apps/api
- *
- * After running:
- * 1. Copy the printed ETHEREAL_* values to your .env
- * 2. The sender will appear in the Compose modal
- */
 async function main() {
   if (!process.env.DATABASE_URL) {
     console.error('DATABASE_URL not set in .env');
@@ -42,7 +33,6 @@ async function main() {
   console.log('\nPreview URL base: https://ethereal.email/messages');
   console.log('Login at: https://ethereal.email with the credentials above');
 
-  // Verify transport
   const transport = nodemailer.createTransport({
     host: testAccount.smtp.host,
     port: testAccount.smtp.port,
@@ -53,7 +43,6 @@ async function main() {
   await transport.verify();
   console.log('✅ SMTP transport verified\n');
 
-  // Create sender record for the admin user (first user in DB)
   const prisma = new PrismaClient();
   try {
     const firstUser = await prisma.user.findFirst({ orderBy: { createdAt: 'asc' } });

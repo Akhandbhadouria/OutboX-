@@ -37,14 +37,6 @@ export function getEmailQueue(): Queue<EmailJobData> {
   return emailQueue;
 }
 
-/**
- * Enqueue a delayed email job with a deterministic job ID.
- * The job ID is derived from the email record's database ID so that
- * re-enqueueing after a restart does not create duplicate jobs.
- *
- * BullMQ job ID constraint: must not contain colons in some versions.
- * We use a dash-based format: email-{emailId}
- */
 export async function enqueueEmailJob(
   emailId: string,
   jobData: EmailJobData,
@@ -57,15 +49,12 @@ export async function enqueueEmailJob(
     await queue.add(EMAIL_QUEUE_NAME, jobData, {
       jobId,
       delay: delayMs,
-      // Override default attempts — permanent failures should not retry indefinitely
       attempts: 5,
       backoff: { type: 'exponential', delay: 5000 },
     });
     logger.info('Email job enqueued', { jobId, emailId, delayMs });
     return jobId;
   } catch (err) {
-    // BullMQ throws if a job with this ID already exists in active/waiting/delayed
-    // This is expected behavior — the job already exists and will run
     const errMsg = (err as Error).message ?? '';
     if (errMsg.includes('already exists') || errMsg.includes('Job already')) {
       logger.debug('Email job already exists in queue (idempotent)', { jobId });
@@ -75,17 +64,11 @@ export async function enqueueEmailJob(
   }
 }
 
-/**
- * Get queue metrics for the dashboard.
- */
 export async function getQueueCounts() {
   const queue = getEmailQueue();
   return queue.getJobCounts('waiting', 'delayed', 'active', 'completed', 'failed');
 }
 
-/**
- * Close the queue connection gracefully.
- */
 export async function closeEmailQueue(): Promise<void> {
   if (emailQueue) {
     await emailQueue.close();

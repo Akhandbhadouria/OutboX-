@@ -13,7 +13,6 @@ export function createError(message: string, statusCode: number): AppError {
   return err;
 }
 
-// Global error handler — must have 4 parameters
 export function errorHandler(
   err: AppError,
   _req: Request,
@@ -39,7 +38,6 @@ export function errorHandler(
   });
 }
 
-// Catch-all 404 handler
 export function notFoundHandler(_req: Request, res: Response): void {
   res.status(404).json({ success: false, error: 'Route not found' });
 }

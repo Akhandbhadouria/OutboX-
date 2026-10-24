@@ -24,22 +24,6 @@ interface ProcessorDeps {
   encryptionKey: string;
 }
 
-/**
- * Core email processor.
- *
- * State machine (PostgreSQL authoritative):
- *   scheduled → processing → sent | failed
- *
- * Idempotency:
- *   - Conditional update to 'processing' prevents two workers from sending the same email.
- *   - Deterministic BullMQ job ID (email-{emailId}) prevents duplicate queue entries.
- *
- * SMTP delivery limitation:
- *   True exactly-once SMTP delivery cannot be guaranteed after a network failure.
- *   We use idempotent DB transitions + provider message IDs to minimize duplicates,
- *   but a network timeout before receiving the server's 250 OK may cause a retry
- *   that results in a duplicate delivery at the SMTP level.
- */
 export async function processEmailJob(
   job: Job<EmailJobData>,
   deps: ProcessorDeps
@@ -54,8 +38,6 @@ export async function processEmailJob(
     attempt: job.attemptsMade + 1,
   });
 
-  // ─── Step 1: Atomic DB transition scheduled → processing ──────────────────
-  // Prevents two workers from processing the same email simultaneously.
   const updated = await prisma.scheduledEmail.updateMany({
     where: {
       id: data.emailId,
@@ -68,7 +50,6 @@ export async function processEmailJob(
   });
 
   if (updated.count === 0) {
-    // Another worker already claimed it, or it's already sent/failed
     const existing = await prisma.scheduledEmail.findUnique({
       where: { id: data.emailId },
       select: { status: true },
@@ -77,14 +58,12 @@ export async function processEmailJob(
       emailId: data.emailId,
       currentStatus: existing?.status,
     });
-    return; // Do not throw — complete the job
+    return;
   }
 
   try {
-    // ─── Step 2: Enforce minimum send interval ───────────────────────────────
     const slotClaimed = await claimSendSlot(redis, data.senderId, minSendIntervalMs);
     if (!slotClaimed) {
-      // Reset to scheduled and reschedule
       await prisma.scheduledEmail.update({
         where: { id: data.emailId },
         data: { status: 'scheduled' },
@@ -98,7 +77,6 @@ export async function processEmailJob(
       return;
     }
 
-    // ─── Step 3: Enforce hourly rate limit ────────────────────────────────────
     const rateLimitResult = await reserveHourlySlot(
       redis,
       data.senderId,
@@ -106,7 +84,6 @@ export async function processEmailJob(
     );
 
     if (!rateLimitResult.allowed) {
-      // Reset to scheduled and reschedule to next hour
       await prisma.scheduledEmail.update({
         where: { id: data.emailId },
         data: { status: 'scheduled' },
@@ -118,12 +95,10 @@ export async function processEmailJob(
         retryAfterMs: rateLimitResult.retryAfterMs,
       });
 
-      // ─── Step 4: Send Slack notification (first time per hour, deduplicated) ─
       await notifySlackRateLimit(prisma, redis, data, rateLimitResult.retryAfterMs);
       return;
     }
 
-    // ─── Step 5: Send email via SMTP ─────────────────────────────────────────
     const { transport, fromAddress } = await createSmtpTransport(
       prisma,
       data.senderId,
@@ -141,7 +116,6 @@ export async function processEmailJob(
     const previewUrl = nodemailer.getTestMessageUrl(info) || null;
     const providerMsgId = info.messageId ?? null;
 
-    // ─── Step 6: Persist success ──────────────────────────────────────────────
     await prisma.scheduledEmail.update({
       where: { id: data.emailId },
       data: {
@@ -153,7 +127,6 @@ export async function processEmailJob(
       },
     });
 
-    // ─── Step 7: Update Elasticsearch ────────────────────────────────────────
     await updateEsDocument(es, data.emailId, 'sent', new Date());
 
     logger.info('Email sent successfully', {
@@ -174,7 +147,6 @@ export async function processEmailJob(
     });
 
     if (isPermanentFailure || job.attemptsMade + 1 >= (job.opts.attempts ?? 5)) {
-      // Mark as permanently failed
       await prisma.scheduledEmail.update({
         where: { id: data.emailId },
         data: {
@@ -183,21 +155,17 @@ export async function processEmailJob(
         },
       });
       await updateEsDocument(es, data.emailId, 'failed');
-      // Throw to let BullMQ record the failure without retrying
       if (isPermanentFailure) throw Object.assign(err as Error, { noRetry: true });
     } else {
-      // Reset to scheduled for BullMQ retry
       await prisma.scheduledEmail.update({
         where: { id: data.emailId },
         data: { status: 'scheduled', lastError: errMsg },
       });
     }
 
-    throw err; // BullMQ will handle retry based on job options
+    throw err;
   }
 }
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function createSmtpTransport(
   prisma: PrismaClient,
@@ -237,7 +205,6 @@ async function updateEsDocument(
       doc_as_upsert: false,
     });
   } catch (err) {
-    // Non-critical — do not fail the email send
     logger.error('ES update failed', { emailId, error: (err as Error).message });
   }
 }

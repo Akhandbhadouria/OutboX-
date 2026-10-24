@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-// ─── Email Status ──────────────────────────────────────────────────────────────
 export const EmailStatus = {
   SCHEDULED: 'scheduled',
   PROCESSING: 'processing',
@@ -10,7 +9,6 @@ export const EmailStatus = {
 
 export type EmailStatusType = typeof EmailStatus[keyof typeof EmailStatus];
 
-// ─── Scheduling Schemas ────────────────────────────────────────────────────────
 export const ScheduleEmailSchema = z.object({
   senderId: z.string().uuid('Invalid sender ID'),
   subject: z.string().min(1, 'Subject is required').max(998, 'Subject too long'),
@@ -42,7 +40,6 @@ export const CreateCampaignSchema = z.object({
 
 export type CreateCampaignInput = z.infer<typeof CreateCampaignSchema>;
 
-// ─── API Response types ────────────────────────────────────────────────────────
 export interface ApiResponse<T = void> {
   success: boolean;
   data?: T;
@@ -58,7 +55,6 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-// ─── User types ────────────────────────────────────────────────────────────────
 export interface UserDto {
   id: string;
   name: string;
@@ -67,7 +63,6 @@ export interface UserDto {
   createdAt: string;
 }
 
-// ─── Sender types ─────────────────────────────────────────────────────────────
 export interface SenderDto {
   id: string;
   name: string;
@@ -76,7 +71,6 @@ export interface SenderDto {
   createdAt: string;
 }
 
-// ─── Email types ───────────────────────────────────────────────────────────────
 export interface ScheduledEmailDto {
   id: string;
   recipientEmail: string;
@@ -93,7 +87,6 @@ export interface ScheduledEmailDto {
   createdAt: string;
 }
 
-// ─── Campaign types ────────────────────────────────────────────────────────────
 export interface CampaignDto {
   id: string;
   name: string;
@@ -106,7 +99,6 @@ export interface CampaignDto {
   createdAt: string;
 }
 
-// ─── Dashboard stats ───────────────────────────────────────────────────────────
 export interface DashboardStats {
   totalScheduled: number;
   totalSent: number;
@@ -117,7 +109,6 @@ export interface DashboardStats {
   activeJobs: number;
 }
 
-// ─── Slack types ───────────────────────────────────────────────────────────────
 export interface SlackStatusDto {
   connected: boolean;
   teamName: string | null;
@@ -125,7 +116,6 @@ export interface SlackStatusDto {
   connectedAt: string | null;
 }
 
-// ─── Queue job data ────────────────────────────────────────────────────────────
 export interface EmailJobData {
   emailId: string;
   campaignId: string | null;
@@ -141,7 +131,6 @@ export interface EmailJobData {
   idempotencyKey: string;
 }
 
-// ─── Elasticsearch document ────────────────────────────────────────────────────
 export interface EmailDocument {
   emailId: string;
   userId: string;

@@ -22,7 +22,6 @@ import { logger } from './utils/logger';
 export async function createApp(): Promise<express.Application> {
   const app = express();
 
-  // ─── Security headers ────────────────────────────────────────────────────────
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -36,7 +35,6 @@ export async function createApp(): Promise<express.Application> {
     })
   );
 
-  // ─── CORS ────────────────────────────────────────────────────────────────────
   app.use(
     cors({
       origin: config.WEB_ORIGIN,
@@ -46,7 +44,6 @@ export async function createApp(): Promise<express.Application> {
     })
   );
 
-  // ─── Request logging ──────────────────────────────────────────────────────────
   app.use(
     morgan('combined', {
       stream: { write: (msg) => logger.http(msg.trim()) },
@@ -57,7 +54,6 @@ export async function createApp(): Promise<express.Application> {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
 
-  // ─── Redis-backed sessions ─────────────────────────────────────────────────
   const redisClient = new Redis(config.REDIS_URL, {
     maxRetriesPerRequest: null,
   });
@@ -85,12 +81,10 @@ export async function createApp(): Promise<express.Application> {
     })
   );
 
-  // ─── Passport ────────────────────────────────────────────────────────────────
   configurePassport();
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // ─── Bull Board (protected) ───────────────────────────────────────────────────
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');
 
@@ -101,7 +95,6 @@ export async function createApp(): Promise<express.Application> {
 
   app.use('/admin/queues', requireAdmin, serverAdapter.getRouter());
 
-  // ─── Health check ─────────────────────────────────────────────────────────────
   app.get('/api/health', async (_req, res) => {
     const health: Record<string, string> = { status: 'ok' };
 
@@ -115,15 +108,13 @@ export async function createApp(): Promise<express.Application> {
     res.json(health);
   });
 
-  // ─── Routes ───────────────────────────────────────────────────────────────────
   app.use('/api/auth', authRouter);
   app.use('/api/emails', emailRouter);
-  app.use('/api/campaigns', emailRouter); // campaigns share the email router
+  app.use('/api/campaigns', emailRouter);
   app.use('/api/slack', slackRouter);
   app.use('/api/senders', emailRouter);
   app.use('/api/dashboard', emailRouter);
 
-  // ─── Error handling ───────────────────────────────────────────────────────────
   app.use(notFoundHandler);
   app.use(errorHandler);
 
