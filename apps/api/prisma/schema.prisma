@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User ──────────────────────────────────────────────────────────────────────
+model User {
+  id             String   @id @default(uuid())
+  googleId       String   @unique @map("google_id")
+  name           String
+  email          String   @unique
+  avatarUrl      String?  @map("avatar_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  senders          Sender[]
+  campaigns        EmailCampaign[]
+  scheduledEmails  ScheduledEmail[]
+  slackConnections SlackConnection[]
+
+  @@map("users")
+}
+
+// ─── Sender ────────────────────────────────────────────────────────────────────
+model Sender {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  email       String
+  displayName String   @map("display_name")
+  smtpHost    String   @map("smtp_host")
+  smtpPort    Int      @map("smtp_port")
+  smtpUser    String   @map("smtp_user")
+  // smtpPass is stored encrypted — never returned in API responses
+  smtpPassEnc String   @map("smtp_pass_enc")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaigns       EmailCampaign[]
+  scheduledEmails ScheduledEmail[]
+
+  @@unique([userId, email])
+  @@index([userId])
+  @@map("senders")
+}
+
+// ─── EmailCampaign ─────────────────────────────────────────────────────────────
+model EmailCampaign {
+  id                 String   @id @default(uuid())
+  userId             String   @map("user_id")
+  senderId           String   @map("sender_id")
+  name               String
+  subject            String
+  body               String
+  startAt            DateTime @map("start_at")
+  delaySeconds       Int      @default(2) @map("delay_seconds")
+  maxEmailsPerHour   Int      @default(100) @map("max_emails_per_hour")
+  totalRecipients    Int      @default(0) @map("total_recipients")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender          Sender           @relation(fields: [senderId], references: [id])
+  scheduledEmails ScheduledEmail[]
+
+  @@index([userId])
+  @@index([senderId])
+  @@map("email_campaigns")
+}
+
+// ─── ScheduledEmail ────────────────────────────────────────────────────────────
+model ScheduledEmail {
+  id              String    @id @default(uuid())
+  campaignId      String?   @map("campaign_id")
+  userId          String    @map("user_id")
+  senderId        String    @map("sender_id")
+  recipientEmail  String    @map("recipient_email")
+  subject         String
+  body            String
+  scheduledAt     DateTime  @map("scheduled_at")
+  sentAt          DateTime? @map("sent_at")
+  status          String    @default("scheduled") // scheduled | processing | sent | failed
+  attemptCount    Int       @default(0) @map("attempt_count")
+  lastError       String?   @map("last_error")
+  idempotencyKey  String    @unique @map("idempotency_key")
+  bullJobId       String?   @map("bull_job_id")
+  providerMsgId   String?   @map("provider_msg_id")
+  previewUrl      String?   @map("preview_url")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  campaign  EmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender    Sender         @relation(fields: [senderId], references: [id])
+
+  @@index([userId])
+  @@index([senderId])
+  @@index([campaignId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([userId, status])
+  @@map("scheduled_emails")
+}
+
+// ─── SlackConnection ───────────────────────────────────────────────────────────
+model SlackConnection {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  teamId      String   @map("team_id")
+  teamName    String   @map("team_name")
+  slackUserId String?  @map("slack_user_id")
+  // Token is AES-256-GCM encrypted at rest
+  tokenEnc    String   @map("token_enc")
+  scopes      String   // comma-separated list
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("slack_connections")
+}

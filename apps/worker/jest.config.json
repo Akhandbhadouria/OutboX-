@@ -1,0 +1,17 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "roots": ["<rootDir>/tests"],
+  "moduleNameMapper": {
+    "^@reachinbox/shared$": "<rootDir>/../../packages/shared/src/index.ts"
+  },
+  "testTimeout": 30000,
+  "globals": {
+    "ts-jest": {
+      "tsconfig": {
+        "module": "commonjs",
+        "moduleResolution": "node"
+      }
+    }
+  }
+}
